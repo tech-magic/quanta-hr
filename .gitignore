@@ -1,3 +1,12 @@
+# Skip Virtual Environments
+**/*-venv/
+
+# Ignore everything in llm_adaptors
+/data/llm_adaptors/*
+
+# But NOT the README.md file
+!/data/llm_adaptors/README.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
