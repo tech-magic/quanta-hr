@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$FORCE_DESTROY_COMPUTE" = "true" ]; then
+if [ "$DISABLE_STRICT_MODE" = "true" ]; then
     set +e +u
     set +o pipefail
     echo "Strict mode OFF"

@@ -13,7 +13,7 @@
 # 1. We've used us-east-1 as the AWS region to ensure that, we can use the latest AWS infrastructure out of all AWS regions
 # 2. In case, the terraform destroy command (in docker/entrypoint.sh), is not reachable due to an unexpected bug in the program;
 #    - you can still destroy the terraform provisioned infrastructure by manually setting the environment variable;
-#      FORCE_DESTROY_COMPUTE=true 
+#      DISABLE_STRICT_MODE=true 
 
 version: "3.9"
 
@@ -39,8 +39,10 @@ services:
       - ANSIBLE_VERSION=9.5.1
 
       # It is recommended to set the below environment variable to false all the time.
+      # Also the below environment variable is set as false by default.
       # However, set this to true, ONLY if you're unable to automatically destroy any resources already provisioned by terraform
       # due to any execution flaw issue in docker/entrypoint.sh bash script.
-      - FORCE_DESTROY_COMPUTE=true         
+      #
+      # - DISABLE_STRICT_MODE=false         
     tty: true
     stdin_open: true
