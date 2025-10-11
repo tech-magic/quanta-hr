@@ -56,6 +56,14 @@ All this without compromising on accuracy or intelligence.
 
 ---
 
+## How to run
+
+```
+podman compose up --build
+```
+
+---
+
 ## Quantization Pipeline
 
 ```mermaid

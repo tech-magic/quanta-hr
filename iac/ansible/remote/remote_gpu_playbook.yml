@@ -1,0 +1,193 @@
+---
+- name: Setup LLM training environment
+  hosts: all
+  gather_facts: true
+  become: yes
+  vars:
+    llm_settings: {}
+    s3_bucket_name: "{{ generated_s3_bucket }}"
+    work_dir: "{{ ansible_env.HOME }}/llm_work"
+
+  tasks:
+    - name: Print selected facts including disk space in GB
+      debug:
+        msg:
+          - "OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          - "Kernel: {{ ansible_facts['kernel'] }}"
+          - "Architecture: {{ ansible_facts['architecture'] }}"
+          - "CPU: {{ ansible_facts['processor'] }}"
+          - "Memory: {{ '%.2f' | format(ansible_facts['memtotal_mb'] / 1024) }} GB"
+          - "Disk space:"
+          - "{% for mount in ansible_mounts %}  {{ mount.mount }}: {{ '%.2f' | format(mount.size_total / (1024**3)) }} GB total, {{ '%.2f' | format(mount.size_available / (1024**3)) }} GB available{% endfor %}"
+
+
+    - name: Show system info
+      shell: |
+        echo "Running on Ubuntu: $(lsb_release -d | cut -f2)"
+        echo "Date: $(date)"
+        uname -a
+        echo "Target AWS S3 bucket is: {{ s3_bucket_name }}"
+      register: system_info
+      changed_when: false
+
+    - debug:
+        var: system_info.stdout_lines
+
+    - name: Step 0 - Create working directory
+      file:
+        path: "{{ work_dir }}"
+        state: directory
+      register: create_work_dir
+
+    - debug:
+        var: create_work_dir.stdout_lines
+
+    - name: Step 1 - Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      register: apt_update
+
+    - debug:
+        var: apt_update.stdout_lines
+
+    - name: Step 2 - Add deadsnakes PPA
+      apt_repository:
+        repo: ppa:deadsnakes/ppa
+        state: present
+
+    - name: Update apt cache after adding PPA
+      apt:
+        update_cache: yes
+
+    - name: Step 3 - Install Python and build essentials
+      apt:
+        name:
+          - python3
+          - python3-venv
+          - python3-pip
+          - python3-dev
+          - build-essential
+          - unzip
+          - curl
+        state: present
+      register: apt_install
+
+    - debug:
+        var: apt_install.stdout_lines
+
+    - name: Upgrade pip (system-wide)
+      pip:
+        name: pip
+        state: latest
+        executable: pip
+      register: pip_update
+
+    - debug:
+        var: pip_update.stdout_lines
+
+    - name: Step 4 - Download AWS CLI v2 if not installed
+      get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: "/tmp/awscliv2.zip"
+        mode: '0644'
+      register: aws_cli_download
+
+    - debug:
+        var: aws_cli_download.stdout_lines
+
+    - name: Unzip AWS CLI v2 if not installed
+      unarchive:
+        src: "/tmp/awscliv2.zip"
+        dest: "/tmp"
+        remote_src: yes
+      args:
+        creates: /usr/local/bin/aws
+      register: aws_cli_unzip
+
+    - debug:
+        var: aws_cli_unzip.stdout_lines
+
+    - name: Install AWS CLI v2 if not installed
+      shell: /tmp/aws/install --update
+      args:
+        creates: /usr/local/bin/aws
+      notify: rerun s3 sync
+      register: aws_cli_install
+
+    - debug:
+        var: aws_cli_install.stdout_lines
+
+    - name: Step 5 - Sync data and scripts from S3
+      shell: |
+        aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/scripts {{ work_dir }}/scripts --exact-timestamps
+      args:
+        chdir: "{{ work_dir }}"
+      register: s3_sync
+
+    - debug:
+        var: s3_sync.stdout_lines
+
+    - name: List working directory contents
+      command: ls -l "{{ work_dir }}"
+      register: dir_listing
+      changed_when: false
+
+    - debug:
+        var: dir_listing.stdout_lines
+
+    - name: Step 6 - Setup Python Virtual Environment
+      command: python3 -m venv qlora-venv
+      args:
+        chdir: "{{ work_dir }}"
+        creates: "{{ work_dir }}/qlora-venv/bin/activate"
+      register: create_python_venv
+
+    - debug:
+        var: create_python_venv.stdout_lines
+
+    - name: Ensure pip, setuptools, wheel are up to date
+      shell: |
+        {{ work_dir }}/qlora-venv/bin/pip install --upgrade pip setuptools wheel
+      args:
+        chdir: "{{ work_dir }}"
+      register: pip_update_in_venv
+
+    - debug:
+        var: pip_update_in_venv.stdout_lines
+
+    - name: Install Python dependencies in venv
+      shell: |
+        {{ work_dir }}/qlora-venv/bin/pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+        {{ work_dir }}/qlora-venv/bin/pip install transformers peft datasets bitsandbytes accelerate boto3
+      args:
+        chdir: "{{ work_dir }}"
+      register: python_dependencies
+
+    - debug:
+        var: python_dependencies.stdout_lines
+
+    - name: Step 7 - Run qlora_training.py inside venv
+      shell: |
+        {{ work_dir }}/qlora-venv/bin/python {{ work_dir }}/scripts/qlora_remote_gpu_training.py {{ s3_bucket_name }}
+      args:
+        chdir: "{{ work_dir }}"
+      register: qlora_run
+      ignore_errors: false
+
+    - name: Print qlora_training.py output
+      debug:
+        msg: "{{ qlora_run.stdout_lines }}"
+
+    - name: Finished setup
+      debug:
+        msg: "✅ Completed model training and successfully uploaded the trained model and adapter to AWS S3 bucket {{ s3_bucket_name }}"
+
+  handlers:
+    - name: rerun s3 sync
+      shell: |
+        aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/scripts {{ work_dir }}/scripts --exact-timestamps
+      args:
+        chdir: "{{ work_dir }}"

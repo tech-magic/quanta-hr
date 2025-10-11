@@ -1,0 +1,46 @@
+# ================
+# Pre-requisites
+# ================
+#
+# 1. Ensure that you have an AWS account and valid AWS credentials.
+# 2. Ensure that your AWS account has sufficient privileges to execute iac/terraform/main.tf
+# 3. Install AWS CLI in your local machine
+# 4. Configure your AWS credentials to your default AWS profile using `aws configure` command inside the $HOME/.aws folder
+
+# ======
+# Notes
+# ======
+# 1. We've used us-east-1 as the AWS region to ensure that, we can use the latest AWS infrastructure out of all AWS regions
+# 2. In case, the terraform destroy command (in docker/entrypoint.sh), is not reachable due to an unexpected bug in the program;
+#    - you can still destroy the terraform provisioned infrastructure by manually setting the environment variable;
+#      FORCE_DESTROY_COMPUTE=true 
+
+version: "3.9"
+
+services:
+  terraform-ansible-runner:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    container_name: qlora-llm-provisioner
+    volumes:
+      # ✅ Mount your local aws credentials directory to /root/.aws in this docker container
+      - $HOME/.aws:/root/.aws:ro
+
+      # ✅ Mount your local . (i.e., the exact directory where this docker-compose.yml script is located)
+      # to /workspace in this docker container.
+      # Also, if you're using . as your local directory, make sure to navigate to this directory in commandline
+      # to run this docker-compose.yml script with docker/podman etc.
+      - .:/workspace              
+    entrypoint: ["/entrypoint.sh"]
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TERRAFORM_VERSION=1.9.5
+      - ANSIBLE_VERSION=9.5.1
+
+      # It is recommended to set the below environment variable to false all the time.
+      # However, set this to true, ONLY if you're unable to automatically destroy any resources already provisioned by terraform
+      # due to any execution flaw issue in docker/entrypoint.sh bash script.
+      - FORCE_DESTROY_COMPUTE=true         
+    tty: true
+    stdin_open: true

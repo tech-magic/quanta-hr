@@ -1,0 +1,48 @@
+{
+  "model": {
+    "name": "QLoRA-HR-Assistant-Float-16",
+    "base_llm_model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+    "quantization": {
+      "load_in_4bit": true,
+      "bnb_4bit_compute_dtype": "float16",
+      "bnb_4bit_use_double_quant": true,
+      "bnb_4bit_quant_type": "nf4"
+    },
+    "lora": {
+      "r": 16,
+      "lora_alpha": 32,
+      "target_modules": ["q_proj", "v_proj"],
+      "lora_dropout": 0.05,
+      "bias": "none",
+      "task_type": "CAUSAL_LM"
+    },
+    "max_sequence_length": 1024
+  },
+  "dataset": {
+    "type": "json",
+    "train_files": "data/llm/train/*.json",
+    "validation_files": "data/llm/validate/*.json"
+  },
+  "training": {
+    "per_device_train_batch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "warmup_steps": 50,
+    "max_steps": 1000,
+    "learning_rate": 0.0002,
+    "fp16": true,
+    "logging_steps": 10,
+    "save_strategy": "steps",
+    "save_steps": 50,
+    "save_total_limit": 5,
+    "report_to": "none",
+    "resume_from_uploads": true
+  },
+  "prompt_format": {
+    "include_input": true
+  },
+  "compute": {
+    "platform": "aws",
+    "instance_type": "g5.xlarge",
+    "boot_os_query": "Deep Learning AMI GPU PyTorch*Ubuntu 20.04*"
+  }
+}
