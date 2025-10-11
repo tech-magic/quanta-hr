@@ -5,7 +5,7 @@ FROM --platform=$TARGETPLATFORM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TERRAFORM_VERSION=1.9.5
 ENV ANSIBLE_VERSION=9.5.1
-ENV FORCE_DESTROY_COMPUTE=false
+ENV DISABLE_STRICT_MODE=false
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
