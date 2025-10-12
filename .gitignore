@@ -1,6 +1,13 @@
 # Skip Virtual Environments
 **/*-venv/
 
+# Generated Files/Folders
+tf_state/
+iac/terraform/.terraform/
+iac/terraform/.terraform.lock.hcl
+model/
+target/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -10,7 +17,6 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-target/
 .Python
 build/
 develop-eggs/
