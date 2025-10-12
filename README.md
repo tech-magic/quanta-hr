@@ -6,6 +6,19 @@ QuantaHR is a smart, resource-efficient HR assistant powered by a **special-purp
 
 ---
 
+## 📈 Why QuantaHR?
+
+Running large general-purpose LLMs is **expensive and resource-heavy**. QuantaHR leverages **QLoRA quantization** to deliver:  
+
+- Drastically reduced memory footprint  
+- Faster CPU inference  
+- Lower storage requirements  
+- A model trained **specifically for your HR domain**  
+
+All this without compromising on accuracy or intelligence.  
+
+---
+
 ## 🌟 Key Benefits
 
 - **Private & Secure**  
@@ -31,28 +44,6 @@ QuantaHR is a smart, resource-efficient HR assistant powered by a **special-purp
 - Summarize policies and documents for employees  
 - Generate personalized onboarding instructions  
 - Assist HR teams with recruitment and employee management tasks  
-
----
-
-## ⚙️ How It Works
-
-1. **Data Preparation**: Collect your HR documents, policies, and FAQs.  
-2. **Build a Special-Purpose QLoRA LLM**: Train a quantized LLM on your own data.  
-3. **Deploy & Run**: Run your private LLM locally or on a lightweight server.  
-4. **Interact**: Ask QuantaHR questions and get intelligent, context-aware answers instantly.  
-
----
-
-## 📈 Why QuantaHR?
-
-Running large general-purpose LLMs is **expensive and resource-heavy**. QuantaHR leverages **QLoRA quantization** to deliver:  
-
-- Drastically reduced memory footprint  
-- Faster CPU inference  
-- Lower storage requirements  
-- A model trained **specifically for your HR domain**  
-
-All this without compromising on accuracy or intelligence.  
 
 ---
 
@@ -163,6 +154,15 @@ podman compose up --build
   }
 }
 ```
+
+---
+
+## ⚙️ How It Works
+
+1. **Data Preparation**: Collect your HR documents, policies, and FAQs.  
+2. **Build a Special-Purpose QLoRA LLM**: Train a quantized LLM on your own data.  
+3. **Deploy & Run**: Run your private LLM locally or on a lightweight server.  
+4. **Interact**: Ask QuantaHR questions and get intelligent, context-aware answers instantly.  
 
 ---
 
