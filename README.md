@@ -4,8 +4,6 @@
 
 QuantaHR is a smart, resource-efficient HR assistant powered by a **special-purpose QLoRA LLM** trained on your own data. Say goodbye to expensive, heavy general-purpose LLMs — now you can run a **private, high-performance HR assistant** with minimal CPU, memory, and storage requirements.  
 
----
-
 ## 📈 Why QuantaHR?
 
 Running large general-purpose LLMs is **expensive and resource-heavy**. QuantaHR leverages **QLoRA quantization** to deliver:  
@@ -16,8 +14,6 @@ Running large general-purpose LLMs is **expensive and resource-heavy**. QuantaHR
 - A model trained **specifically for your HR domain**  
 
 All this without compromising on accuracy or intelligence.  
-
----
 
 ## 🌟 Key Benefits
 
@@ -35,8 +31,6 @@ All this without compromising on accuracy or intelligence.
 
 - **Easy to Deploy & Scale**  
   Deploy QuantaHR on your local machine, private server, or containerized environment. Scale according to your team’s needs without breaking the bank.  
-
----
 
 ## 💡 Use Cases
 
@@ -87,8 +81,6 @@ podman machine set --rootful=true
 podman machine start
 ```
 
----
-
 ## How to run
 
 1. In a `terminal` (i.e., `command prompt`) using `cd`, **navigate to the directory where this README.md is located**.
@@ -96,6 +88,16 @@ podman machine start
 
 ```bash
 podman compose up --build
+```
+
+## Inspecting Auto-provisioned AWS Resources
+
+```bash
+aws resourcegroupstaggingapi get-resources \
+    --region us-east-1 \
+    --tag-filters Key=Environment,Values=Training \
+    --output json \
+    --no-paginate
 ```
 
 ---
@@ -155,16 +157,12 @@ podman compose up --build
 }
 ```
 
----
-
 ## ⚙️ How It Works
 
 1. **Data Preparation**: Collect your HR documents, policies, and FAQs.  
 2. **Build a Special-Purpose QLoRA LLM**: Train a quantized LLM on your own data.  
 3. **Deploy & Run**: Run your private LLM locally or on a lightweight server.  
 4. **Interact**: Ask QuantaHR questions and get intelligent, context-aware answers instantly.  
-
----
 
 ## How QLoRA Works (for the above JSON example)
 
