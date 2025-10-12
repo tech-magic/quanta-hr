@@ -56,15 +56,117 @@ All this without compromising on accuracy or intelligence.
 
 ---
 
+## Pre-requisites
+
+### 1. AWS CLI Pre-setup
+   - Ensure that you have an `AWS Account` and valid `AWS credentials` (i.e., a pair of **aws_access_key_id** <-> **aws_secret_access_key**).
+   - Ensure that your AWS account has sufficient admin privileges to execute the Infrastructure as a Code setup at `iac/terraform/main.tf`
+   - Install `AWS CLI` in your local machine (please see `https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html`)
+   - Configure your AWS credentials to your default AWS profile using `aws configure` command inside the `$HOME/.aws` folder.
+
+### 2. Install `Podman Desktop` from `https://podman-desktop.io/docs/installation` and make sure that there is a default podman machine running with admin privileges.
+
+**Below are some example scenarios**
+##### Scenario 1
+
+Check whether a podman machine is automatically spawned after `Podman Desktop` with admin previleges
+**OR**
+Whether you already have an existing podman machine with admin previleges
+```bash
+podman machine ls                    
+# NAME                    VM TYPE     CREATED      LAST UP            CPUS        MEMORY      DISK SIZE
+# podman-machine-default  applehv     3 weeks ago  Currently running  4           4GiB        20GiB
+
+podman machine inspect podman-machine-default  | grep Rootful
+#           "Rootful": true,
+```
+
+##### Scenario 2
+Creating a brand new podman machine with admin previleges
+```bash
+podman machine init --rootful
+podman machine start
+```
+
+##### Scenario 3
+Updating an existing podman machine with admin previleges.
+```bash
+podman machine stop
+podman machine set --rootful=true
+podman machine start
+```
+
+---
+
 ## How to run
 
-```
+1. In a `terminal` (i.e., `command prompt`) using `cd`, **navigate to the directory where this README.md is located**.
+2. Run `podman` from `terminal` as below. You could check for more options by reading through comments in `docker-compose.yml`
+
+```bash
 podman compose up --build
 ```
 
 ---
 
-## Quantization Pipeline
+## Declarative Quantization Configuration
+
+##### data/config/qlora_config.json
+
+```json
+{
+  "model": {
+    "name": "QLoRA-HR-Assistant-Float-16",
+    "base_llm_model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+    "quantization": {
+      "load_in_4bit": true,
+      "bnb_4bit_compute_dtype": "float16",
+      "bnb_4bit_use_double_quant": true,
+      "bnb_4bit_quant_type": "nf4"
+    },
+    "lora": {
+      "r": 16,
+      "lora_alpha": 32,
+      "target_modules": ["q_proj", "v_proj"],
+      "lora_dropout": 0.05,
+      "bias": "none",
+      "task_type": "CAUSAL_LM"
+    },
+    "max_sequence_length": 1024
+  },
+  "dataset": {
+    "type": "json",
+    "train_files": "data/llm/train/*.json",
+    "validation_files": "data/llm/validate/*.json"
+  },
+  "training": {
+    "per_device_train_batch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "warmup_steps": 50,
+    "max_steps": 1000,
+    "learning_rate": 0.0002,
+    "fp16": true,
+    "logging_steps": 10,
+    "save_strategy": "steps",
+    "save_steps": 50,
+    "save_total_limit": 5,
+    "report_to": "none",
+    "resume_from_uploads": true
+  },
+  "prompt_format": {
+    "include_input": true
+  },
+  "compute": {
+    "platform": "aws",
+    "instance_type": "g5.xlarge",
+    "boot_os_query": "Deep Learning AMI GPU PyTorch*Ubuntu 20.04*"
+  }
+}
+```
+
+---
+
+## How QLoRA Works (for the above JSON example)
 
 ```mermaid
 flowchart TB
