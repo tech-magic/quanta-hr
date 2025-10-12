@@ -129,7 +129,7 @@ def main():
     print(f"🧠 Loading model from {local_model_dir}")
     model = AutoModelForCausalLM.from_pretrained(
         local_model_dir,
-        torch_dtype=torch.float32
+        torch_dtype=torch.float16
     ).to(device)
     model.eval()
 
