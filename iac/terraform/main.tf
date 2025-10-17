@@ -116,7 +116,7 @@ locals {
   gpu_instance_type = var.compute_instance_type
   gpu_aws_key_pair_name = aws_key_pair.gpu_aws_key_pair.key_name
   resource_tag_name = "${var.llm_model_name}-${random_integer.unique_id.result}"
-  resource_tag_env = "Training"
+  resource_tag_env = "QLoRA_Training"
 }
 
 # -------------------------------
@@ -130,6 +130,15 @@ resource "aws_s3_bucket" "llm_qlora_bucket" {
     Name        = local.resource_tag_name
     Environment = local.resource_tag_env
   }
+}
+
+resource "aws_s3_object" "llm_general_knowledge_data" {
+  for_each = fileset("${var.workspace_dir}/defaults/data/llm/general_knowledge/stanford_alpaca", "**")
+
+  bucket = aws_s3_bucket.llm_qlora_bucket.bucket
+  key    = "defaults/data/llm/general_knowledge/stanford_alpaca/${each.value}"
+  source = "${var.workspace_dir}/defaults/data/llm/general_knowledge/stanford_alpaca/${each.value}"
+  etag   = filemd5("${var.workspace_dir}/defaults/data/llm/general_knowledge/stanford_alpaca/${each.value}")
 }
 
 resource "aws_s3_object" "llm_training_data" {
