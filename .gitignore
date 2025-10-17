@@ -1,6 +1,9 @@
 # Skip Virtual Environments
 **/*-venv/
 
+# macOS system files
+.DS_Store
+
 # Generated Files/Folders
 tf_state/
 iac/terraform/.terraform/
