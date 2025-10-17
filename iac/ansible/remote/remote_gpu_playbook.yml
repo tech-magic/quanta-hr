@@ -118,11 +118,11 @@
     - debug:
         var: aws_cli_install.stdout_lines
 
-    - name: Step 5 - Sync data and scripts from S3
+    - name: Step 5 - Sync data and apps from S3
       shell: |
         aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
         aws s3 sync s3://{{ s3_bucket_name }}/defaults {{ work_dir }}/defaults --exact-timestamps
-        aws s3 sync s3://{{ s3_bucket_name }}/scripts {{ work_dir }}/scripts --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/apps {{ work_dir }}/apps --exact-timestamps
       args:
         chdir: "{{ work_dir }}"
       register: s3_sync
@@ -171,7 +171,7 @@
 
     - name: Step 7 - Run qlora_training.py inside venv
       shell: |
-        {{ work_dir }}/qlora-venv/bin/python {{ work_dir }}/scripts/qlora_remote_gpu_training.py {{ s3_bucket_name }}
+        {{ work_dir }}/qlora-venv/bin/python {{ work_dir }}/apps/qlora_remote_gpu_training.py {{ s3_bucket_name }}
       args:
         chdir: "{{ work_dir }}"
       register: qlora_run
@@ -190,6 +190,6 @@
       shell: |
         aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
         aws s3 sync s3://{{ s3_bucket_name }}/defaults {{ work_dir }}/defaults --exact-timestamps
-        aws s3 sync s3://{{ s3_bucket_name }}/scripts {{ work_dir }}/scripts --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/apps {{ work_dir }}/apps --exact-timestamps
       args:
         chdir: "{{ work_dir }}"

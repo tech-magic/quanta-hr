@@ -55,7 +55,7 @@
 
     - name: Step 7 - Run qlora_local_cpu_inference.py inside venv
       shell: |
-        {{ work_dir }}/qlora-venv/bin/python {{ work_dir }}/scripts/qlora_local_cpu_inference.py --s3-bucket {{ s3_bucket_name }}
+        {{ work_dir }}/qlora-venv/bin/python {{ work_dir }}/apps/qlora_local_cpu_inference.py --s3-bucket {{ s3_bucket_name }}
       args:
         chdir: "{{ work_dir }}"
       register: qlora_testing

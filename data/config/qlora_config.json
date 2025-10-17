@@ -46,9 +46,6 @@
     "report_to": "none",
     "resume_from_uploads": true
   },
-  "prompt_format": {
-    "include_input": true
-  },
   "compute": {
     "platform": "aws",
     "instance_type": "g5.xlarge",

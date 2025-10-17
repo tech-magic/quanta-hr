@@ -159,13 +159,13 @@ resource "aws_s3_object" "llm_training_config" {
   etag   = filemd5("${var.workspace_dir}/data/config/${each.value}")
 }
 
-resource "aws_s3_object" "llm_training_scripts" {
-  for_each = fileset("${var.workspace_dir}/scripts", "**")
+resource "aws_s3_object" "llm_training_apps" {
+  for_each = fileset("${var.workspace_dir}/apps", "**")
 
   bucket = aws_s3_bucket.llm_qlora_bucket.bucket
-  key    = "scripts/${each.value}"
-  source = "${var.workspace_dir}/scripts/${each.value}"
-  etag   = filemd5("${var.workspace_dir}/scripts/${each.value}")
+  key    = "apps/${each.value}"
+  source = "${var.workspace_dir}/apps/${each.value}"
+  etag   = filemd5("${var.workspace_dir}/apps/${each.value}")
 }
 
 # -------------------------------
