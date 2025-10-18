@@ -41,7 +41,7 @@ if len(sys.argv) > 1:
 else:
     raise ValueError("Can't find a value for the S3 Bucket!")
 
-CONFIG_PATH = "data/config/qlora_config.json"
+CONFIG_PATH = "config/qlora_config.json"
 if not os.path.exists(CONFIG_PATH):
     raise FileNotFoundError(f"Can't find the qlora config at: {CONFIG_PATH}")
 

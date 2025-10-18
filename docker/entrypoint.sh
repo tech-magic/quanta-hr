@@ -26,7 +26,7 @@ LLM_DOWNLOAD_DIR_NAME="$WORKSPACE_DIR/model"
 # LLM Settings
 # -------------------------------
 
-LLM_CONFIG_FILE="$WORKSPACE_DIR/data/config/qlora_config.json"
+LLM_CONFIG_FILE="$WORKSPACE_DIR/config/qlora_config.json"
 LLM_SETTINGS_JSON=$(cat "$LLM_CONFIG_FILE")
 
 # -------------------------------
@@ -168,6 +168,17 @@ ansible-playbook -vvv "$LOCAL_CPU_PLAYBOOK" \
     --extra-vars "@$TF_VARS_JSON" --syntax-check
 echo "Successfully completed syntax checks for $LOCAL_CPU_PLAYBOOK"
 
+ANSIBLE_LOG_LOCAL_APP="$TARGET_DIR/ansible_local_app.log"
+LOCAL_APP_PLAYBOOK="$ANSIBLE_DIR/local/local_app_playbook.yml"
+
+echo "Performing syntax checks for $LOCAL_APP_PLAYBOOK"
+ansible-playbook -vvv "$LOCAL_APP_PLAYBOOK" \
+    -i "$LOCAL_INVENTORY_FILE" \
+    -e "work_dir=$WORKSPACE_DIR" \
+    -e "llm_settings=$LLM_SETTINGS_JSON" \
+    --extra-vars "@$TF_VARS_JSON" --syntax-check
+echo "Successfully completed syntax checks for $LOCAL_APP_PLAYBOOK"
+
 # -------------------------------
 # Run Ansible Playbook on Remote GPU Host with logging
 # -------------------------------
@@ -182,7 +193,7 @@ ansible-playbook -vvv "$REMOTE_GPU_PLAYBOOK" \
 echo "✅ $REMOTE_GPU_PLAYBOOK completed successfully."
 
 # -------------------------------
-# Run Ansible Playbook on Local CPU Host with logging and retry logic
+# Run Ansible Playbook on Local CPU Host with logging
 # -------------------------------
 echo "Running local Ansible playbook, $LOCAL_CPU_PLAYBOOK at local machine with CPU."
 echo "Local host execution output is available at -> $ANSIBLE_LOG_LOCAL_CPU"
@@ -209,5 +220,19 @@ terraform -chdir="$TERRAFORM_DIR" destroy \
     -state="$TERRAFORM_STATE_DIR/terraform.tfstate" \
     -lock=true \
     -lock-timeout=300s
+
+# -------------------------------
+# Run Ansible Playbook on Local CPU Host for hosting chainlit application
+# -------------------------------
+echo "Running local Ansible playbook, $LOCAL_APP_PLAYBOOK at local machine with CPU."
+echo "Local host execution output is available at -> $ANSIBLE_LOG_LOCAL_APP"
+
+ansible-playbook -vvv "$LOCAL_APP_PLAYBOOK" \
+    -i "$LOCAL_INVENTORY_FILE" \
+    -e "work_dir=$WORKSPACE_DIR" \
+    -e "llm_settings=$LLM_SETTINGS_JSON" \
+    --extra-vars "@$TF_VARS_JSON" | tee -a "$ANSIBLE_LOG_LOCAL_APP"
+
+echo "✅ $LOCAL_APP_PLAYBOOK completed successfully."
 
 

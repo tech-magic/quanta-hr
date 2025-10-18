@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 import os
-import re
 import json
 import argparse
-from datetime import datetime, timezone
-import boto3
 import torch
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-def validated_dir_name(text):
-    # Replace all non-alphanumeric characters with underscores
-    return re.sub(r'[^A-Za-z0-9]', '_', text)
+from modules.storage.blob_storage_helper import download_s3_dir_if_changed, validated_dir_name
 
 # ---------------------------
 # ARGUMENT PARSING
@@ -25,7 +21,7 @@ def parse_args():
 # ---------------------------
 # LOAD CONFIG
 # ---------------------------
-CONFIG_PATH = "data/config/qlora_config.json"
+CONFIG_PATH = "config/qlora_config.json"
 def load_config(args):
     config_path = args.config or CONFIG_PATH
     if not os.path.exists(config_path):
@@ -35,26 +31,6 @@ def load_config(args):
         config = json.load(f)
 
     return config
-
-# ---------------------------
-# S3 DOWNLOAD HELPER
-# ---------------------------
-def download_s3_dir_if_changed(bucket_name, s3_prefix, local_dir):
-    s3 = boto3.client("s3")
-    paginator = s3.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=bucket_name, Prefix=s3_prefix):
-        for obj in page.get("Contents", []):
-            key = obj["Key"]
-            s3_mod_time = obj["LastModified"]
-            rel_path = os.path.relpath(key, s3_prefix)
-            local_path = os.path.join(local_dir, rel_path)
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            if os.path.exists(local_path):
-                local_mod_time = datetime.fromtimestamp(os.path.getmtime(local_path), tz=timezone.utc)
-                if local_mod_time >= s3_mod_time:
-                    continue
-            print(f"⬇️ Downloading s3://{bucket_name}/{key} → {local_path}")
-            s3.download_file(bucket_name, key, local_path)
 
 # ---------------------------
 # MAIN FUNCTION

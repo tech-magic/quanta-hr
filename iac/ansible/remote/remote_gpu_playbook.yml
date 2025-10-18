@@ -121,7 +121,7 @@
     - name: Step 5 - Sync data and apps from S3
       shell: |
         aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
-        aws s3 sync s3://{{ s3_bucket_name }}/defaults {{ work_dir }}/defaults --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/config {{ work_dir }}/config --exact-timestamps
         aws s3 sync s3://{{ s3_bucket_name }}/apps {{ work_dir }}/apps --exact-timestamps
       args:
         chdir: "{{ work_dir }}"
@@ -189,7 +189,7 @@
     - name: rerun s3 sync
       shell: |
         aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
-        aws s3 sync s3://{{ s3_bucket_name }}/defaults {{ work_dir }}/defaults --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/config {{ work_dir }}/config --exact-timestamps
         aws s3 sync s3://{{ s3_bucket_name }}/apps {{ work_dir }}/apps --exact-timestamps
       args:
         chdir: "{{ work_dir }}"

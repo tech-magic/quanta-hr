@@ -1,6 +1,6 @@
 {
   "model": {
-    "name": "QLoRA-HR-Assistant-Float-16",
+    "name": "ABC-QLoRA-HR-Assistant",
     "base_llm_model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
     "quantization": {
       "load_in_4bit": true,
@@ -22,13 +22,13 @@
     {
       "type": "docx",
       "input_files": [
-        "data/llm/hr_policies/*.docx"
+        "data/hr_policies/*.docx"
       ]
     },
     {
       "type": "alpaca",
       "input_files": [
-        "defaults/data/llm/general_knowledge/stanford_alpaca/*.json"
+        "data/general_knowledge/*.json"
       ]
     }
   ],

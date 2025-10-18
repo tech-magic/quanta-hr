@@ -46,3 +46,5 @@ services:
       # - DISABLE_STRICT_MODE=false         
     tty: true
     stdin_open: true
+    ports:
+      - "8090:8090" # Chainlit application port

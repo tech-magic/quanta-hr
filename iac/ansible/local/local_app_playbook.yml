@@ -1,0 +1,76 @@
+---
+- name: Run local platform-specific inference
+  hosts: all
+  gather_facts: true
+  become: false
+  vars:
+    llm_settings: {}
+    work_dir: "{{ work_dir | default(ansible_env.HOME) }}"
+    s3_bucket_name: "{{ generated_s3_bucket }}"
+
+  tasks:
+    - name: Print detected system
+      debug:
+        msg:
+          - "System: {{ ansible_facts['system'] }}"
+          - "Arch: {{ ansible_facts['architecture'] }}"
+
+    - name: Step 1 - Setup Local Python Virtual Environment
+      command: python3 -m venv qlora-venv
+      args:
+        chdir: "{{ work_dir }}"
+        creates: "{{ work_dir }}/qlora-venv/bin/activate"
+      register: create_local_python_venv
+
+    - debug:
+        var: create_local_python_venv.stdout_lines
+
+    # ✅ IF: Apple Silicon Mac
+    - name: Step 2 - Install Python dependencies in Apple/M1 local venv
+      when:
+        - ansible_facts['system'] == "Darwin"
+        - ansible_facts['architecture'] == "arm64"
+      shell: |
+        {{ work_dir }}/qlora-venv/bin/pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+      args:
+        chdir: "{{ work_dir }}"
+      register: python_dependencies_in_apple_m1
+
+    - debug:
+        var: python_dependencies_in_apple_m1.stdout_lines
+
+    # ⚙️ ELSE: Everything else (Linux, Intel Mac, etc.)
+    - name: Run inference on other systems
+      when: not (ansible_facts['system'] == "Darwin" and ansible_facts['architecture'] == "arm64")
+      shell: |
+        {{ work_dir }}/qlora-venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cu118
+      args:
+        chdir: "{{ work_dir }}"
+      register: python_dependencies_in_others
+
+    - debug:
+        var: python_dependencies_in_others.stdout_lines
+
+    # Common Python Dependencies
+    - name: Common Python Dependencies
+      shell: |
+        {{ work_dir }}/qlora-venv/bin/pip install transformers peft datasets bitsandbytes accelerate boto3 chainlit
+      args:
+        chdir: "{{ work_dir }}"
+      register: common_python_dependencies
+
+    - debug:
+        var: common_python_dependencies.stdout_lines
+
+    - name: Step 7 - Run qlora_chainlit_app.py inside venv
+      shell: |
+        source {{ work_dir }}/qlora-venv/bin/activate
+        {{ work_dir }}/qlora-venv/bin/chainlit run {{ work_dir }}/apps/qlora_chainlit_app.py --host 0.0.0.0 --port 8090
+      args:
+        chdir: "{{ work_dir }}"
+      register: qlora_chainlit
+      ignore_errors: false
+
+    - name: Print qlora_chainlit output
+      debug:
+        msg: "{{ qlora_chainlit.stdout_lines }}"

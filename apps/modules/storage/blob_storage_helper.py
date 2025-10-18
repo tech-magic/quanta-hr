@@ -4,14 +4,20 @@ import boto3
 import re
 import shutil
 
+from datetime import datetime, timezone
+
 from transformers import TrainerCallback
 
 # -----------
-# UTILITIES
+# VALIDATING DIRECTORY NAMES
 # -----------
 def validated_dir_name(text):
     # Replace all non-alphanumeric characters with underscores
     return re.sub(r'[^A-Za-z0-9]', '_', text)
+
+# -----------
+# UPLOAD/DOWNLOAD TO/FROM S3
+# -----------
 
 def upload_final_results(local_dir, bucket_name, s3_prefix):
     s3 = boto3.client("s3")
@@ -50,6 +56,26 @@ def get_latest_local_checkpoint(local_checkpoint_base_dir):
     checkpoints = sorted(Path(local_checkpoint_base_dir).glob("checkpoint-*"), key=os.path.getmtime)
     return str(checkpoints[-1]) if checkpoints else None
 
+def download_s3_dir_if_changed(bucket_name, s3_prefix, local_dir):
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket_name, Prefix=s3_prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            s3_mod_time = obj["LastModified"]
+            rel_path = os.path.relpath(key, s3_prefix)
+            local_path = os.path.join(local_dir, rel_path)
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            if os.path.exists(local_path):
+                local_mod_time = datetime.fromtimestamp(os.path.getmtime(local_path), tz=timezone.utc)
+                if local_mod_time >= s3_mod_time:
+                    continue
+            print(f"⬇️ Downloading s3://{bucket_name}/{key} → {local_path}")
+            s3.download_file(bucket_name, key, local_path)
+
+# ---------------------------
+# HANDLE LLM TRAINING CHECKPOINTS
+# ---------------------------
 class LLMTrainingCheckpointCallback(TrainerCallback):
     def __init__(self, bucket_name, s3_prefix, local_checkpoint_base_dir):
         self.bucket_name = bucket_name

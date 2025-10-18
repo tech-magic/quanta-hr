@@ -52,7 +52,7 @@ def create_tokenized_alpaca_dataset(
 #     # Example: Tokenize Alpaca JSON files
 #     alpaca_dataset = create_tokenized_alpaca_dataset(
 #         base_llm_model=model_name,
-#         input_file_patterns=["data/llm/hr_policies/*.json"],
+#         input_file_patterns=["data/hr_policies/*.json"],
 #         max_sequence_length=512
 #     )
 #     print("Alpaca tokenized dataset:", alpaca_dataset)

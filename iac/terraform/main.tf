@@ -64,6 +64,16 @@ resource "random_integer" "unique_id" {
 }
 
 # -------------------------------
+# Declare Local Variables
+# -------------------------------
+
+locals {
+  resource_tag_name = "${var.llm_model_name}-${random_integer.unique_id.result}"
+  resource_tag_env = "QLoRA_Training"
+  gpu_instance_type = var.compute_instance_type
+}
+
+# -------------------------------
 # Get your public internet IP dynamically
 # -------------------------------
 data "http" "my_ip" {
@@ -97,6 +107,11 @@ resource "tls_private_key" "gpu_tls_private_key" {
 resource "aws_key_pair" "gpu_aws_key_pair" {
   key_name   = "gpu_tls_private_key_${random_integer.unique_id.result}"
   public_key = tls_private_key.gpu_tls_private_key.public_key_openssh
+
+  tags = {
+    Name        = local.resource_tag_name
+    Environment = local.resource_tag_env
+  }
 }
 
 # Save private key locally
@@ -107,16 +122,13 @@ resource "local_file" "gpu_private_key_pem" {
 }
 
 # -------------------------------
-# Declare Local Variables
+# Declare Derived Local Variables
 # -------------------------------
 
 locals {
   my_ip_cidr = "${chomp(data.http.my_ip.body)}/32"
   deep_learning_ami = data.aws_ami.deep_learning_ami.id
-  gpu_instance_type = var.compute_instance_type
   gpu_aws_key_pair_name = aws_key_pair.gpu_aws_key_pair.key_name
-  resource_tag_name = "${var.llm_model_name}-${random_integer.unique_id.result}"
-  resource_tag_env = "QLoRA_Training"
 }
 
 # -------------------------------
@@ -132,31 +144,22 @@ resource "aws_s3_bucket" "llm_qlora_bucket" {
   }
 }
 
-resource "aws_s3_object" "llm_general_knowledge_data" {
-  for_each = fileset("${var.workspace_dir}/defaults/data/llm/general_knowledge/stanford_alpaca", "**")
-
-  bucket = aws_s3_bucket.llm_qlora_bucket.bucket
-  key    = "defaults/data/llm/general_knowledge/stanford_alpaca/${each.value}"
-  source = "${var.workspace_dir}/defaults/data/llm/general_knowledge/stanford_alpaca/${each.value}"
-  etag   = filemd5("${var.workspace_dir}/defaults/data/llm/general_knowledge/stanford_alpaca/${each.value}")
-}
-
 resource "aws_s3_object" "llm_training_data" {
-  for_each = fileset("${var.workspace_dir}/data/llm", "**")
+  for_each = fileset("${var.workspace_dir}/data", "**")
 
   bucket = aws_s3_bucket.llm_qlora_bucket.bucket
-  key    = "data/llm/${each.value}"
-  source = "${var.workspace_dir}/data/llm/${each.value}"
-  etag   = filemd5("${var.workspace_dir}/data/llm/${each.value}")
+  key    = "data/${each.value}"
+  source = "${var.workspace_dir}/data/${each.value}"
+  etag   = filemd5("${var.workspace_dir}/data/${each.value}")
 }
 
 resource "aws_s3_object" "llm_training_config" {
-  for_each = fileset("${var.workspace_dir}/data/config", "**")
+  for_each = fileset("${var.workspace_dir}/config", "**")
 
   bucket = aws_s3_bucket.llm_qlora_bucket.bucket
-  key    = "data/config/${each.value}"
-  source = "${var.workspace_dir}/data/config/${each.value}"
-  etag   = filemd5("${var.workspace_dir}/data/config/${each.value}")
+  key    = "config/${each.value}"
+  source = "${var.workspace_dir}/config/${each.value}"
+  etag   = filemd5("${var.workspace_dir}/config/${each.value}")
 }
 
 resource "aws_s3_object" "llm_training_apps" {

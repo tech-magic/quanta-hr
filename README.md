@@ -104,12 +104,12 @@ aws resourcegroupstaggingapi get-resources \
 
 ## Declarative Quantization Configuration
 
-##### data/config/qlora_config.json
+##### config/qlora_config.json
 
 ```json
 {
   "model": {
-    "name": "QLoRA-HR-Assistant-Float-16",
+    "name": "ABC-QLoRA-HR-Assistant",
     "base_llm_model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
     "quantization": {
       "load_in_4bit": true,
@@ -127,11 +127,20 @@ aws resourcegroupstaggingapi get-resources \
     },
     "max_sequence_length": 1024
   },
-  "dataset": {
-    "type": "json",
-    "train_files": "data/llm/train/*.json",
-    "validation_files": "data/llm/validate/*.json"
-  },
+  "datasets": [
+    {
+      "type": "docx",
+      "input_files": [
+        "data/hr_policies/*.docx"
+      ]
+    },
+    {
+      "type": "alpaca",
+      "input_files": [
+        "data/general_knowledge/*.json"
+      ]
+    }
+  ],
   "training": {
     "per_device_train_batch_size": 4,
     "gradient_accumulation_steps": 4,
@@ -145,9 +154,6 @@ aws resourcegroupstaggingapi get-resources \
     "save_total_limit": 5,
     "report_to": "none",
     "resume_from_uploads": true
-  },
-  "prompt_format": {
-    "include_input": true
   },
   "compute": {
     "platform": "aws",
