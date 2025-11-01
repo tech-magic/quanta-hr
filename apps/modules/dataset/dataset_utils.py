@@ -1,3 +1,5 @@
+import os
+
 from datasets import concatenate_datasets, DatasetDict
 
 from modules.dataset.alpaca.alpaca_to_dataset import create_tokenized_alpaca_dataset
@@ -6,6 +8,7 @@ from modules.dataset.docx.docx_to_dataset import create_tokenized_dataset_from_d
 def build_tokenized_dataset(
     datasets_config,
     base_tokenizer,
+    output_dir,
     max_sequence_length: int = 512
 ):
     """
@@ -24,16 +27,25 @@ def build_tokenized_dataset(
 
     print(f"Tokenizing datasets -> {datasets_config}")
 
-    def load_dataset_by_type(dataset_type, input_files, include_prompt_inputs=True):
+    def load_dataset_by_type(dataset_cfg, dataset_output_dir):
+        dataset_type = dataset_cfg["type"]
+
         if dataset_type == "docx":
-            print(f"Input file patterns for DocX -> {input_files}")
+
             return create_tokenized_dataset_from_documents(
-                base_tokenizer=base_tokenizer,
-                input_file_patterns=input_files,
-                max_sequence_length=max_sequence_length
+                dataset_config=dataset_cfg,
+                base_dataset_output_dir=dataset_output_dir,
+                llm_tokenizer=base_tokenizer,
+                llm_tokenizer_max_length=max_sequence_length
             )
         elif dataset_type == "alpaca":
-            print(f"Input file patterns for Alpaca -> {input_files}")
+
+            input_files = dataset_cfg["input_files"]
+            include_prompt_inputs = dataset_cfg.get("include_prompt_inputs", True)
+
+            print(f"Alpaca DataSet: Input file patterns -> {input_files}")
+            print(f"Alpaca DataSet: Include prompt inputs -> {include_prompt_inputs}")
+
             return create_tokenized_alpaca_dataset(
                 base_tokenizer=base_tokenizer,
                 include_prompt_inputs=include_prompt_inputs,
@@ -48,20 +60,22 @@ def build_tokenized_dataset(
 
     for dataset_cfg in datasets_config:
         ds_type = dataset_cfg["type"]
-        input_files = dataset_cfg["input_files"]
-        include_prompt_inputs = dataset_cfg.get("include_prompt_inputs", True)
 
-        tokenized_ds = load_dataset_by_type(ds_type, input_files, include_prompt_inputs)
+        dataset_output_dir = os.path.join(output_dir, dataset_cfg.get("id", "default"))
+        os.makedirs(dataset_output_dir, exist_ok=True)
 
-        if "train" in tokenized_ds:
-            train_splits.append(tokenized_ds["train"])
-        else:
-            raise ValueError(f"Dataset {ds_type} missing 'train' split")
+        tokenized_ds = load_dataset_by_type(dataset_cfg, dataset_output_dir)
 
-        if "test" in tokenized_ds:
-            val_splits.append(tokenized_ds["test"])
-        else:
-            raise ValueError(f"Dataset {ds_type} missing validation or test split")
+        if tokenized_ds:
+            if "train" in tokenized_ds:
+                train_splits.append(tokenized_ds["train"])
+            else:
+                raise ValueError(f"Dataset {ds_type} missing 'train' split")
+
+            if "test" in tokenized_ds:
+                val_splits.append(tokenized_ds["test"])
+            else:
+                raise ValueError(f"Dataset {ds_type} missing validation or test split")
 
     merged_train_dataset = concatenate_datasets(train_splits)
     merged_val_dataset = concatenate_datasets(val_splits)

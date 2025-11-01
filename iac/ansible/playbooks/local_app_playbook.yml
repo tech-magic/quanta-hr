@@ -54,7 +54,7 @@
     # Common Python Dependencies
     - name: Common Python Dependencies
       shell: |
-        {{ work_dir }}/qlora-venv/bin/pip install transformers peft datasets bitsandbytes accelerate boto3 chainlit
+        {{ work_dir }}/qlora-venv/bin/pip install transformers peft datasets bitsandbytes accelerate boto3 streamlit
       args:
         chdir: "{{ work_dir }}"
       register: common_python_dependencies
@@ -62,10 +62,10 @@
     - debug:
         var: common_python_dependencies.stdout_lines
 
-    - name: Step 7 - Run qlora_chainlit_app.py inside venv
+    - name: Step 7 - Run qlora_streamlit_app.py inside venv
       shell: |
         source {{ work_dir }}/qlora-venv/bin/activate
-        {{ work_dir }}/qlora-venv/bin/chainlit run {{ work_dir }}/apps/qlora_chainlit_app.py --host 0.0.0.0 --port 8090
+        {{ work_dir }}/qlora-venv/bin/streamlit run {{ work_dir }}/apps/qlora_streamlit_app.py --server.address 0.0.0.0 --server.port 8090
       args:
         chdir: "{{ work_dir }}"
       register: qlora_chainlit

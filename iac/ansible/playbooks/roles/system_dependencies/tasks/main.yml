@@ -1,0 +1,196 @@
+---
+- name: Update and upgrade apt packages
+  apt:
+    update_cache: yes
+    upgrade: dist
+  register: apt_update
+  changed_when: false
+  become: yes
+
+- debug:
+    var: apt_update.stdout_lines
+
+- name: Install common dependencies
+  apt:
+    name:
+      - build-essential
+      - software-properties-common
+      - command-not-found
+      - gnupg
+      - ca-certificates
+      - curl
+      - unzip
+      - git
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Add Universe repo if missing (required for Python)
+  command: add-apt-repository universe
+  args:
+    creates: /etc/apt/sources.list.d/universe.list
+  become: yes
+
+- name: Add Deadsnakes PPA
+  apt_repository:
+    repo: "ppa:deadsnakes/ppa"
+    state: present
+    filename: "deadsnakes"
+    update_cache: yes
+  become: yes
+
+- name: Update and upgrade apt packages
+  apt:
+    update_cache: yes
+    upgrade: dist
+  register: apt_update
+  changed_when: false
+  become: yes
+
+- debug:
+    var: apt_update.stdout_lines
+
+- name: Install build dependencies
+  apt:
+    name:
+      - libssl-dev
+      - zlib1g-dev
+      - libbz2-dev
+      - libreadline-dev
+      - libsqlite3-dev
+      - libffi-dev
+      - liblzma-dev
+      - pkg-config
+      - make
+      - libncurses5-dev
+      - libgdbm-dev
+      - python3-venv
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Create pyenv root directory
+  file:
+    path: "{{ pyenv_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: yes
+
+- name: Clone pyenv repository
+  git:
+    repo: https://github.com/pyenv/pyenv.git
+    dest: "{{ pyenv_root }}"
+    version: master
+    update: no
+  become: yes
+
+- name: Ensure pyenv environment variables are set for all users
+  copy:
+    dest: /etc/profile.d/pyenv.sh
+    content: |
+      export PYENV_ROOT="{{ pyenv_root }}"
+      export PATH="$PYENV_ROOT/bin:$PATH"
+      eval "$(pyenv init -)"
+    owner: root
+    group: root
+    mode: "0755"
+  become: yes
+
+- name: Install Python via pyenv
+  shell: |
+    export PYENV_ROOT="{{ pyenv_root }}"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv install -s {{ python_version }}
+    pyenv global {{ python_version }}
+  args:
+    executable: /bin/bash
+  become: yes
+
+- name: Configure update-alternatives for python3
+  alternatives:
+    name: python3
+    path: "{{ pyenv_root }}/versions/{{ python_version }}/bin/python3"
+    link: /usr/bin/python3
+    priority: 100
+  become: yes
+
+- name: Configure update-alternatives for python
+  alternatives:
+    name: python
+    path: "{{ pyenv_root }}/versions/{{ python_version }}/bin/python3"
+    link: /usr/bin/python
+    priority: 100
+  become: yes
+
+- name: Configure update-alternatives for pip3
+  alternatives:
+    name: pip3
+    path: "{{ pyenv_root }}/versions/{{ python_version }}/bin/pip3"
+    link: /usr/bin/pip3
+    priority: 100
+  become: yes
+
+- name: Configure update-alternatives for pip
+  alternatives:
+    name: pip
+    path: "{{ pyenv_root }}/versions/{{ python_version }}/bin/pip"
+    link: /usr/bin/pip
+    priority: 100
+  become: yes
+
+- name: Ensure pip is installed and upgraded
+  shell: |
+    python3 -m ensurepip --upgrade
+    python3 -m pip install --upgrade pip
+  args:
+    executable: /bin/bash
+  become: yes
+
+- name: Install pipx system-wide
+  pip:
+    name: pipx
+    executable: pip3
+    state: present
+  become: yes
+
+- name: Ensure system pipx bin path exists
+  file:
+    path: "{{ system_pipx_bin }}"
+    state: directory
+    mode: "0755"
+  become: yes
+
+- name: Install poetry system-wide via pipx
+  shell: |
+    export PATH="{{ system_pipx_bin }}:$PATH"
+    pipx install --system-site-packages poetry
+  args:
+    creates: "{{ system_pipx_bin }}/poetry"
+    executable: /bin/bash
+  become: yes
+
+- name: Ensure system PATH includes pipx binaries for all users
+  lineinfile:
+    path: /etc/profile.d/pipx.sh
+    create: yes
+    line: 'export PATH="{{ system_pipx_bin }}:$PATH"'
+    owner: root
+    group: root
+    mode: "0755"
+  become: yes
+
+- name: Verify system-wide installation
+  shell: |
+    python3 --version
+    pip --version
+    pipx --version
+    poetry --version
+  register: verify_output
+  changed_when: false
+
+- name: Display verification output
+  debug:
+    msg: "{{ verify_output.stdout_lines }}"

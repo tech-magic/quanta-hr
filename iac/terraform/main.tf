@@ -138,6 +138,11 @@ resource "aws_s3_bucket" "llm_qlora_bucket" {
   bucket = "${var.llm_storage_blob_name}-${random_integer.unique_id.result}"
   acl    = "private"
   force_destroy = true
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
   tags = {
     Name        = local.resource_tag_name
     Environment = local.resource_tag_env
@@ -172,7 +177,7 @@ resource "aws_s3_object" "llm_training_apps" {
 }
 
 # -------------------------------
-# IAM Role and Policy for EC2
+# IAM Role and Policies for EC2
 # -------------------------------
 resource "aws_iam_role" "ec2_role" {
   name = "ec2-qlora-role-${random_integer.unique_id.result}"
@@ -200,7 +205,7 @@ resource "aws_iam_policy" "s3_access_policy" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:GetObject", "s3:ListBucket"]
+        Action   = ["s3:PutObject", "s3:GetObject", "s3:ListBucket", "s3:GetBucketLocation"]
         Resource = [
           aws_s3_bucket.llm_qlora_bucket.arn,
           "${aws_s3_bucket.llm_qlora_bucket.arn}/*"
@@ -215,9 +220,59 @@ resource "aws_iam_policy" "s3_access_policy" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "attach_policy" {
+resource "aws_iam_role_policy_attachment" "attach_s3_actions_to_policy" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = aws_iam_policy.s3_access_policy.arn
+}
+
+resource "aws_iam_policy" "cloudwatch_access_policy" {
+  name        = "ec2-cloudwatch-access-${random_integer.unique_id.result}"
+  description = "Allow EC2 to read/write to CloudWatch logs"
+  policy      = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = [ "*" ]
+      }
+    ]
+  })
+
+  tags = {
+    Name        = local.resource_tag_name
+    Environment = local.resource_tag_env
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "attach_cloudwatch_actions_to_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = aws_iam_policy.cloudwatch_access_policy.arn
+}
+
+resource "aws_iam_policy" "bedrock_access_policy" {
+  name        = "ec2-bedrock-access-${random_integer.unique_id.result}"
+  description = "Allow EC2 to access Bedrock Models"
+  policy      = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:Converse", "bedrock:ConverseStream"]
+        Resource = [ "*" ]
+      }
+    ]
+  })
+
+  tags = {
+    Name        = local.resource_tag_name
+    Environment = local.resource_tag_env
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "attach_bedrock_actions_to_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = aws_iam_policy.bedrock_access_policy.arn
 }
 
 # -------------------------------
@@ -239,6 +294,10 @@ resource "aws_security_group" "gpu_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  lifecycle {
+    prevent_destroy = false
   }
 
   tags = {
@@ -272,6 +331,10 @@ resource "aws_instance" "gpu_instance" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2-qlora-profile-${random_integer.unique_id.result}"
   role = aws_iam_role.ec2_role.name
+
+  lifecycle {
+    prevent_destroy = false
+  }
 
   tags = {
     Name        = local.resource_tag_name

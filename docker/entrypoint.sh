@@ -148,7 +148,7 @@ done
 # Syntax Check Ansible Playbooks
 # -------------------------------
 ANSIBLE_LOG_REMOTE_GPU="$TARGET_DIR/ansible_remote_gpu.log"
-REMOTE_GPU_PLAYBOOK="$ANSIBLE_DIR/remote/remote_gpu_playbook.yml"
+REMOTE_GPU_PLAYBOOK="$ANSIBLE_DIR/playbooks/remote_gpu_playbook.yml"
 
 echo "Performing syntax checks for $REMOTE_GPU_PLAYBOOK"
 ansible-playbook -vvv "$REMOTE_GPU_PLAYBOOK" \
@@ -158,7 +158,7 @@ ansible-playbook -vvv "$REMOTE_GPU_PLAYBOOK" \
 echo "Successfully completed syntax checks for $REMOTE_GPU_PLAYBOOK"
 
 ANSIBLE_LOG_LOCAL_CPU="$TARGET_DIR/ansible_local_cpu.log"
-LOCAL_CPU_PLAYBOOK="$ANSIBLE_DIR/local/local_cpu_playbook.yml"
+LOCAL_CPU_PLAYBOOK="$ANSIBLE_DIR/playbooks/local_cpu_playbook.yml"
 
 echo "Performing syntax checks for $LOCAL_CPU_PLAYBOOK"
 ansible-playbook -vvv "$LOCAL_CPU_PLAYBOOK" \
@@ -169,7 +169,7 @@ ansible-playbook -vvv "$LOCAL_CPU_PLAYBOOK" \
 echo "Successfully completed syntax checks for $LOCAL_CPU_PLAYBOOK"
 
 ANSIBLE_LOG_LOCAL_APP="$TARGET_DIR/ansible_local_app.log"
-LOCAL_APP_PLAYBOOK="$ANSIBLE_DIR/local/local_app_playbook.yml"
+LOCAL_APP_PLAYBOOK="$ANSIBLE_DIR/playbooks/local_app_playbook.yml"
 
 echo "Performing syntax checks for $LOCAL_APP_PLAYBOOK"
 ansible-playbook -vvv "$LOCAL_APP_PLAYBOOK" \

@@ -1,0 +1,24 @@
+---
+- name: Print selected facts including disk space in GB
+  debug:
+    msg:
+      - "OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+      - "Kernel: {{ ansible_facts['kernel'] }}"
+      - "Architecture: {{ ansible_facts['architecture'] }}"
+      - "CPU: {{ ansible_facts['processor'] }}"
+      - "Memory: {{ '%.2f' | format(ansible_facts['memtotal_mb'] / 1024) }} GB"
+      - "Disk space:"
+      - "{% for mount in ansible_mounts %}  {{ mount.mount }}: {{ '%.2f' | format(mount.size_total / (1024**3)) }} GB total, {{ '%.2f' | format(mount.size_available / (1024**3)) }} GB available{% endfor %}"
+
+
+- name: Show system info
+  shell: |
+    echo "Running on Ubuntu: $(lsb_release -d | cut -f2)"
+    echo "Date: $(date)"
+    uname -a
+    echo "Target AWS S3 bucket is: {{ s3_bucket_name }}"
+  register: system_info
+  changed_when: false
+
+- debug:
+    var: system_info.stdout_lines

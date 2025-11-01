@@ -1,0 +1,31 @@
+---
+- name: Download AWS CLI
+  get_url:
+    url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+    dest: "/tmp/awscliv2.zip"
+    mode: '0644'
+  register: aws_cli_download
+
+- debug:
+    var: aws_cli_download.stdout_lines
+
+- name: Unzip AWS CLI
+  unarchive:
+    src: "/tmp/awscliv2.zip"
+    dest: "/tmp"
+    remote_src: yes
+  args:
+    creates: /usr/local/bin/aws
+  register: aws_cli_unzip
+
+- debug:
+    var: aws_cli_unzip.stdout_lines
+
+- name: Install AWS CLI
+  shell: /tmp/aws/install --update
+  args:
+    creates: /usr/local/bin/aws
+  register: aws_cli_install
+
+- debug:
+    var: aws_cli_install.stdout_lines

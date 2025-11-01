@@ -1,0 +1,97 @@
+---
+# Ensures compatible SQLite version for ChromaDB on dynamic cloud hosts
+- name: Update package cache based on package manager
+  become: yes
+  block:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: ansible_facts['pkg_mgr'] == 'apt'
+
+    - name: Update yum cache
+      yum:
+        update_cache: yes
+      when: ansible_facts['pkg_mgr'] == 'yum'
+  ignore_errors: yes
+
+- name: Ensure required system packages are installed
+  become: yes
+  package:
+    name:
+      - sqlite3
+      - libsqlite3-dev
+      - python3-pip
+      - python3-venv
+      - build-essential
+      - wget
+      - tar
+    state: present
+  ignore_errors: yes
+
+- name: Check current SQLite version
+  shell: "sqlite3 --version | cut -d' ' -f1"
+  register: sqlite_version
+  ignore_errors: yes
+
+- name: Print detected SQLite version
+  debug:
+    msg: "Detected SQLite version: {{ sqlite_version.stdout | default('unknown') }}"
+
+- name: Upgrade SQLite if version < 3.35.0
+  when: sqlite_version.stdout is version('3.35.0', '<')
+  block:
+    - name: Download and build latest SQLite from source
+      become: yes
+      shell: |
+        set -e
+        cd /tmp
+        wget https://www.sqlite.org/2024/sqlite-autoconf-3460100.tar.gz -O sqlite.tar.gz
+        tar xvf sqlite.tar.gz
+        cd sqlite-autoconf-*
+        ./configure
+        make
+        make install
+        ldconfig
+      args:
+        executable: /bin/bash
+
+    - name: Verify upgraded SQLite version
+      shell: "sqlite3 --version"
+      register: sqlite_new_version
+      ignore_errors: yes
+
+    - name: Display new SQLite version
+      debug:
+        msg: "Upgraded SQLite version: {{ sqlite_new_version.stdout | default('unknown') }}"
+
+- name: Ensure Python virtual environment exists
+  become: yes
+  shell: |
+    python3 -m venv {{ qlora_venv_path }}
+  args:
+    creates: "{{ qlora_venv_path }}/bin/activate"
+
+- name: Install pysqlite3-binary in virtualenv
+  pip:
+    name: pysqlite3-binary
+    virtualenv: "{{ qlora_venv_path }}"
+    state: present
+
+- name: Patch Python entry script to override sqlite3
+  lineinfile:
+    path: "{{ qlora_entry_script }}"
+    insertafter: BOF
+    line: "import sys, pysqlite3; sys.modules['sqlite3'] = pysqlite3"
+  when: qlora_entry_script is file
+  tags: patch
+
+- name: Verify SQLite version inside Python
+  shell: |
+    source {{ qlora_venv_path }}/bin/activate
+    python -c "import sqlite3; print('Python SQLite version:', sqlite3.sqlite_version)"
+  register: sqlite_py_version
+  ignore_errors: yes
+
+- name: Display Python-level SQLite version
+  debug:
+    msg: "{{ sqlite_py_version.stdout | default('Verification failed') }}"

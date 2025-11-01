@@ -1,7 +1,6 @@
 import copy
 
 from typing import Dict
-from transformers import AutoTokenizer
 
 #####################################
 # Tokenization Utility

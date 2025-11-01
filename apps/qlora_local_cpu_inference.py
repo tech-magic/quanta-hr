@@ -3,6 +3,7 @@ import os
 import json
 import argparse
 import torch
+import time
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -21,7 +22,7 @@ def parse_args():
 # ---------------------------
 # LOAD CONFIG
 # ---------------------------
-CONFIG_PATH = "config/qlora_config.json"
+CONFIG_PATH = "/workspace/config/qlora_config.json"
 def load_config(args):
     config_path = args.config or CONFIG_PATH
     if not os.path.exists(config_path):
@@ -47,15 +48,15 @@ def main():
     s3_bucket = args.s3_bucket or os.getenv("QLORA_S3_BUCKET", "default-qlora-s3-bucket")
 
     remote_model_dir = f"{validated_dir_name(model_name)}_complete_llm"
-    local_model_dir = os.path.join("model", remote_model_dir)
+    local_model_dir = os.path.join("/workspace/model", remote_model_dir)
 
     remote_adapter_dir = f"{validated_dir_name(model_name)}_adapter_only"
-    local_adapter_dir = os.path.join("model", remote_adapter_dir)
+    local_adapter_dir = os.path.join("/workspace/model", remote_adapter_dir)
 
     remote_checkpoints_dir = f"{validated_dir_name(model_name)}_training_checkpoints"
-    local_checkpoints_dir = os.path.join("model", remote_checkpoints_dir)
+    local_checkpoints_dir = os.path.join("/workspace/model", remote_checkpoints_dir)
 
-    prompt_text = args.prompt or "Explain in simple terms how QLoRA fine-tuning works."
+    prompt_text = args.prompt or "How many days of annual leave can I have per year?"
 
     print(f"📥 Model name: {model_name}")
     print(f"🪣 S3 Bucket: {s3_bucket}")
@@ -112,6 +113,8 @@ def main():
     # ---------------------------
     # GENERATE OUTPUT
     # ---------------------------
+    # Start the timer
+    start_time = time.time()
     inputs = tokenizer(prompt_text, return_tensors="pt").to(device)
     with torch.inference_mode():
         output = model.generate(
@@ -125,6 +128,21 @@ def main():
 
     print("\n=== Prompt ===\n" + prompt_text)
     print("\n=== Model Output ===\n" + text)
+
+    # End the timer
+    end_time = time.time()
+
+    # Calculate elapsed time
+    elapsed_time = end_time - start_time
+
+    # Convert seconds to hh:mm:ss
+    hours, rem = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(rem, 60)
+    formatted_time = f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+
+    print(f"Time taken to answer the LLM Query: {formatted_time}")
+
+
 
 if __name__ == "__main__":
     main()

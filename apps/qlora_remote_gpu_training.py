@@ -52,26 +52,29 @@ MODEL_NAME = config["model"]["name"]
 BASE_LLM_MODEL = config["model"]["base_llm_model"]
 
 BASE_LLM_DIR = os.path.join(f"{validated_dir_name(BASE_LLM_MODEL)}_base_llm")
-OUTPUT_DIR = os.path.join(f"{validated_dir_name(MODEL_NAME)}_complete_llm")
+COMPLETE_LLM_DIR = os.path.join(f"{validated_dir_name(MODEL_NAME)}_complete_llm")
 TRAINING_DIR = os.path.join(f"{validated_dir_name(MODEL_NAME)}_adapter_with_training")
 ADAPTER_DIR = os.path.join(f"{validated_dir_name(MODEL_NAME)}_adapter_only")
 CHECKPOINT_DIR = os.path.join(f"{validated_dir_name(MODEL_NAME)}_training_checkpoints")
+DATASETS_OUTPUT_DIR = os.path.join(f"{validated_dir_name(MODEL_NAME)}_dataset_outputs")
 
 print(f"✅ Started training for LLM model: {MODEL_NAME}")
 print(f"✅ Using base LLM model: {BASE_LLM_MODEL}")
 
 os.makedirs(BASE_LLM_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(COMPLETE_LLM_DIR, exist_ok=True)
 os.makedirs(TRAINING_DIR, exist_ok=True)
 os.makedirs(ADAPTER_DIR, exist_ok=True)
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+os.makedirs(DATASETS_OUTPUT_DIR, exist_ok=True)
 
 print(f"✅ QLoRA {BASE_LLM_MODEL} (Base LLM) - Output directory: {BASE_LLM_DIR}")
-print(f"✅ QLoRA {MODEL_NAME} Custom LLM (merged with BaseLLM) - Output directory: {OUTPUT_DIR}")
+print(f"✅ QLoRA {MODEL_NAME} Custom LLM (merged with BaseLLM) - Output directory: {COMPLETE_LLM_DIR}")
 print(f"✅ QLoRA {MODEL_NAME} QLoRA Adapter with Training MetaData - Output directory: {TRAINING_DIR}")
 print(f"✅ QLoRA {MODEL_NAME} QLoRA Adapter Only - Output directory: {ADAPTER_DIR}")
 print(f"✅ QLoRA {MODEL_NAME} QLoRA local Training Checkpoints - Output directory: {CHECKPOINT_DIR}")
-print(f"✅ Using S3 bucket: {S3_BUCKET}")
+print(f"✅ QLoRA {MODEL_NAME} Dataset Outputs - Output directory: {DATASETS_OUTPUT_DIR}")
+print(f"✅ Using AWS S3-based blob s3://{S3_BUCKET}")
 
 # ----------------------
 # Customized LLM loading from BASE_LLM_MODEL for QLoRA (Quantization + LoRA)
@@ -82,7 +85,14 @@ qlora_model = load_lora_model_from_base_model(base_model, config)
 # ----------------------
 # LOAD + TOKENIZE + MERGE TRAINING DATASETS
 # ----------------------
-tokenized_dataset = build_tokenized_dataset(config["datasets"], base_tokenizer, config["model"]["max_sequence_length"])
+tokenized_dataset = build_tokenized_dataset(
+    datasets_config=config["datasets"], 
+    base_tokenizer=base_tokenizer,
+    output_dir=DATASETS_OUTPUT_DIR,
+    max_sequence_length=config["model"]["max_sequence_length"]
+)
+
+upload_final_results(DATASETS_OUTPUT_DIR, S3_BUCKET, DATASETS_OUTPUT_DIR)
 
 # ----------------------
 # TRAINING ARGUMENTS
@@ -95,7 +105,7 @@ training_args = TrainingArguments(
     learning_rate=config["training"]["learning_rate"],
     fp16=config["training"]["fp16"] and torch.cuda.is_available(),
     logging_steps=config["training"]["logging_steps"],
-    output_dir=OUTPUT_DIR,
+    output_dir=COMPLETE_LLM_DIR,
     save_strategy=config["training"]["save_strategy"],
     save_steps=config["training"]["save_steps"],
     save_total_limit=config["training"]["save_total_limit"],
@@ -156,14 +166,14 @@ base_tokenizer.save_pretrained(TRAINING_DIR)
 
 # Save complete customized QLoRA LLM
 merged_model = qlora_model.merge_and_unload()
-merged_model.save_pretrained(OUTPUT_DIR)
-base_tokenizer.save_pretrained(OUTPUT_DIR)
+merged_model.save_pretrained(COMPLETE_LLM_DIR)
+base_tokenizer.save_pretrained(COMPLETE_LLM_DIR)
 
 # ----------------------
 # UPLOAD FINAL RESULTS TO S3
 # ----------------------
 upload_final_results(ADAPTER_DIR, S3_BUCKET, ADAPTER_DIR)
 upload_final_results(TRAINING_DIR, S3_BUCKET, TRAINING_DIR)
-upload_final_results(OUTPUT_DIR, S3_BUCKET, OUTPUT_DIR)
+upload_final_results(COMPLETE_LLM_DIR, S3_BUCKET, COMPLETE_LLM_DIR)
 
 print(f"✅ Successfully uploaded Trained LLM model: {MODEL_NAME}")

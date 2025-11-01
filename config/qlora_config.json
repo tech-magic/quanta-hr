@@ -20,16 +20,46 @@
   },
   "datasets": [
     {
+      "id": "hr_policies",
       "type": "docx",
       "input_files": [
         "data/hr_policies/*.docx"
-      ]
+      ],
+      "section_detection": {
+        "heading_patterns": [
+          "^(Section)\\b",
+          "^(Policy)\\b",
+          "^(Purpose)\\b",
+          "^(Scope)\\b",
+          "^(Procedure)\\b"
+        ],
+        "detect_all_caps": true
+      },
+      "use_cases": {
+        "qlora": {
+          "alpaca_generator": {
+            "provider": "aws",
+            "config": {
+              "aws_profile": "default",
+              "llm_config": {
+                "model_id": "anthropic.claude-3-haiku-20240307-v1:0"
+              }
+            }
+          }
+        },
+        "rag": {
+          "sentence_transformer": "all-mpnet-base-v2"
+        }
+      },
+      "max_sequence_length": 300
     },
     {
+      "id": "general_knowledge",
       "type": "alpaca",
       "input_files": [
         "data/general_knowledge/*.json"
-      ]
+      ],
+      "include_prompt_inputs": true
     }
   ],
   "training": {
@@ -48,6 +78,7 @@
   },
   "compute": {
     "platform": "aws",
+    "aws_profile": "default",
     "instance_type": "g5.xlarge",
     "boot_os_query": "Deep Learning AMI GPU PyTorch*Ubuntu 20.04*"
   }

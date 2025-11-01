@@ -1,0 +1,82 @@
+---
+- name: Setup LLM training environment
+  hosts: all
+  gather_facts: true
+  become: yes
+  vars:
+    llm_settings: {}
+    s3_bucket_name: "{{ generated_s3_bucket }}"
+    work_dir: "{{ ansible_env.HOME }}/llm_work"
+    qlora_venv_name: "qlora-venv"
+    qlora_venv_path: "{{ work_dir }}/{{ qlora_venv_name }}"
+    qlora_entry_script: "{{ work_dir }}/apps/qlora_remote_gpu_training.py"
+
+    pyenv_root: "/opt/pyenv"
+    python_version: "3.11.14"
+    system_pipx_bin: "/usr/local/bin"
+  tasks:
+    - name: Print System Info
+      include_role:
+        name: system_info
+
+    - name: Create working directory
+      file:
+        path: "{{ work_dir }}"
+        state: directory
+      register: create_work_dir
+
+    - debug:
+        var: create_work_dir.stdout_lines
+
+    - name: Install System Dependencies
+      include_role:
+        name: system_dependencies
+
+    - name: Install AWS CLI
+      include_role:
+        name: aws_cli_setup
+
+    - name: Sync data and apps from S3
+      shell: |
+        aws s3 sync s3://{{ s3_bucket_name }}/data {{ work_dir }}/data --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/config {{ work_dir }}/config --exact-timestamps
+        aws s3 sync s3://{{ s3_bucket_name }}/apps {{ work_dir }}/apps --exact-timestamps
+      args:
+        chdir: "{{ work_dir }}"
+      register: s3_sync
+
+    - debug:
+        var: s3_sync.stdout_lines
+
+    - name: Install Python Dependencies
+      include_role:
+        name: python_dependencies
+
+    - name: Sqlite Dependency Fix
+      include_role:
+        name: sqlite_dependency_fix
+
+    - name: List working directory contents
+      command: ls -l "{{ work_dir }}"
+      register: dir_listing
+      changed_when: false
+
+    - debug:
+        var: dir_listing.stdout_lines
+
+    - name: Run qlora_training.py inside venv
+      shell: |
+        {{ qlora_venv_path }}/bin/python {{ qlora_entry_script }} {{ s3_bucket_name }}
+      args:
+        chdir: "{{ work_dir }}"
+      register: qlora_run
+      ignore_errors: false
+
+    - name: Print qlora_training.py output
+      debug:
+        msg: "{{ qlora_run.stdout_lines }}"
+
+    - name: Finished setup
+      debug:
+        msg: "✅ Completed model training and successfully uploaded the trained model and adapter to AWS S3 bucket {{ s3_bucket_name }}"
+

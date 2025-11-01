@@ -5,6 +5,7 @@
 .DS_Store
 
 # Generated Files/Folders
+chainlit.md
 tf_state/
 iac/terraform/.terraform/
 iac/terraform/.terraform.lock.hcl
