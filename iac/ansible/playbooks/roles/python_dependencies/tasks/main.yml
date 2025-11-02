@@ -6,17 +6,14 @@
         path: "{{ qlora_venv_path | dirname }}"
         state: directory
         mode: "0755"
-      become: yes
 
     - name: Create Python {{ python_version }} virtual environment
-      command: "/usr/bin/python{{ python_version }} -m venv {{ qlora_venv_path }}"
+      command: "{{ python_executable }} -m venv {{ qlora_venv_path }}"
       args:
         creates: "{{ qlora_venv_path }}/bin/activate"
-      become: yes
 
     - name: Install latest pip & wheel inside venv
       command: "{{ qlora_venv_path }}/bin/pip install --upgrade pip wheel"
-      become: yes
 
 - name: Install Python Torch dependencies in venv
   shell: |
@@ -24,7 +21,6 @@
   args:
     chdir: "{{ work_dir }}"
   register: python_torch_dependencies
-  become: yes
 
 - debug:
     var: python_torch_dependencies.stdout_lines
@@ -35,7 +31,6 @@
   args:
     chdir: "{{ work_dir }}"
   register: python_dependencies
-  become: yes
 
 - debug:
     var: python_dependencies.stdout_lines

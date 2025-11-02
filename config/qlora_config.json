@@ -80,6 +80,6 @@
     "platform": "aws",
     "aws_profile": "default",
     "instance_type": "g5.xlarge",
-    "boot_os_query": "Deep Learning AMI GPU PyTorch*Ubuntu 20.04*"
+    "boot_os_query": "Deep Learning*GPU PyTorch*Ubuntu 24.04*"
   }
 }

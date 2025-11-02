@@ -13,7 +13,7 @@
 
     pyenv_root: "/opt/pyenv"
     python_version: "3.11.14"
-    system_pipx_bin: "/usr/local/bin"
+    python_executable: "{{ pyenv_root }}/versions/{{ python_version }}/bin/python"
   tasks:
     - name: Print System Info
       include_role:
