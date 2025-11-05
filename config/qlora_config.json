@@ -40,7 +40,7 @@
           "alpaca_generator": {
             "provider": "aws",
             "config": {
-              "aws_profile": "default",
+              "profile": "iam_instance_profile",
               "llm_config": {
                 "model_id": "anthropic.claude-3-haiku-20240307-v1:0"
               }

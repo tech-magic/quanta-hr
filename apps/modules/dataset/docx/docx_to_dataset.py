@@ -58,11 +58,11 @@ def create_tokenized_dataset_from_documents(
                     build_rag(base_dataset_rag_dir, dataset_id, output_jsonl, sentence_transformer_name)
 
                 output_summary_alpaca_file = os.path.join(curr_dataset_datafile_dir, f"{validated_dir_name(filename)}_summary_alpaca.json")
-                distill(output_jsonl, output_summary_alpaca_file, alpaca_generation_provider, alpaca_generation_llm, "summary")
+                distill(output_jsonl, output_summary_alpaca_file, alpaca_generation_provider, alpaca_generation_profile, alpaca_generation_llm, "summary")
                 alpaca_files.append(output_summary_alpaca_file)
 
                 output_qa_alpaca_file = os.path.join(curr_dataset_datafile_dir, f"{validated_dir_name(filename)}_qa_alpaca.json")
-                distill(output_jsonl, output_qa_alpaca_file, alpaca_generation_provider, alpaca_generation_llm, "qa")
+                distill(output_jsonl, output_qa_alpaca_file, alpaca_generation_provider, alpaca_generation_profile, alpaca_generation_llm, "qa")
                 alpaca_files.append(output_qa_alpaca_file)
 
     return create_tokenized_alpaca_dataset(
